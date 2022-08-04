@@ -9,7 +9,7 @@ stripe.api_key = SECRET_KEY
 
 
 # Create your models here.
-class StripeUserId(models.Model):
+class StripeUser(models.Model):
     i_user = models.ForeignKey(User, on_delete=models.CASCADE)
     stripe_id = models.CharField(max_length=256)
 
@@ -18,7 +18,7 @@ class StripeUserId(models.Model):
 
 
 def post_save_customerUser(sender, instance, created, *args, **kwargs):
-    user, created = StripeUserId.objects.get_or_create(i_user=instance)
+    user, created = StripeUser.objects.get_or_create(i_user=instance)
     print("user:", user)
     print("created:", created)
     if user.stripe_id is None or user.stripe_id == '':

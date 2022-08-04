@@ -1,10 +1,17 @@
 from django.db import models
 from product.models import Product
 import stripe
+from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from config.stripe_key import SECRET_KEY
 stripe.api_key = SECRET_KEY
 
+
+STATUS_CHOICES = (
+    ('active', 'active'),
+    ('unpaid', 'unpaid'),
+    ('cancelled', 'cancelled'),
+)
 
 # Create your models here.
 class productSubscription(models.Model):
@@ -20,19 +27,19 @@ class productSubscription(models.Model):
 def post_save_product(sender, instance, created, *args, **kwargs):
     product       = Product.objects.get(pk=instance.pk)
     product_subscription_obj, is_created = productSubscription.objects.get_or_create(i_product=product)
-    product_name  = product.product_name
+    product_name  = product.name
     product_price = int(product.price*100)
     product_price_id = product_subscription_obj.product_stripe_price_id
     product_id       = product_subscription_obj.product_stripe_id
 
     # When new product is created, object of product and price is created.
-    if product.product_stripe_id is None or product.product_stripe_id == '':
+    if product_subscription_obj.product_stripe_id is None or product_subscription_obj.product_stripe_id == '':
         print("product->if")
-        new_product_stripe_id = stripe.Product.create(name=product.product_name, images=[product.picture, ])
+        new_product_stripe_id = stripe.Product.create(name=product.name)
 
         new_product_price_is_subscribe_id = stripe.Price.create(
                                 unit_amount=product_price,
-                                currency="GBP",
+                                currency="USD",
                                 recurring={"interval": "month"},
                                 product=new_product_stripe_id.id,
                             )
@@ -68,5 +75,14 @@ def post_save_product(sender, instance, created, *args, **kwargs):
             print("product->else / if -> name")
             stripe.Product.modify(product_id, name=product_name)
 
-            
+
+
+class TwelveMonthSubscription(models.Model):
+    customer = models.ForeignKey(User, on_delete=models.CASCADE)
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    month = models.DateTimeField()
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES)
+    
+
+
 post_save.connect(post_save_product, sender=Product)

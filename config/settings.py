@@ -131,3 +131,5 @@ MEDIA_URL = "/images/"
 STATICFILES_DIRS = [os.path.join(BASE_DIR, "static")]
 MEDIA_ROOT = os.path.join(BASE_DIR, "static/images")
 LOGOUT_REDIRECT_URL = "/"
+
+DOMAIN_NAME = "http://127.0.0.1:8000/"

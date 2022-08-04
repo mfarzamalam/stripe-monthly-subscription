@@ -17,10 +17,12 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf.urls.static import static
 from django.conf import settings
+from product.views import home_page
 
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path('', home_page, name='home_page'),
     path('product/', include('product.urls')),
     path('stripe/subscription/', include('stripe_subscription.urls')),
     path('stripe/user/', include('stripe_user.urls')),

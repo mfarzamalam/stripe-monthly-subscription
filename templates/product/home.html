@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% block content %}
+
+    <div class="container">
+        <h1> This is a home page </h1>
+        {% if messages %}
+            {% for message in messages %}
+                {{message}}
+            {% endfor %}
+
+            <br>
+        {% endif %}
+        
+        <a href="{% url 'add_product' %}"> Add Product </a>
+        <a href="{% url 'view_product' %}"> View All Product </a>
+    </div>
+
+
+{% endblock content %}
