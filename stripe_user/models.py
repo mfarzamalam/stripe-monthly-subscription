@@ -9,7 +9,7 @@ stripe.api_key = SECRET_KEY
 
 
 # Create your models here.
-class StripeUser(models.Model):
+class UserStripeMapping(models.Model):
     i_user = models.ForeignKey(User, on_delete=models.CASCADE)
     stripe_id = models.CharField(max_length=256)
 
@@ -17,8 +17,8 @@ class StripeUser(models.Model):
         return self.i_user.email
 
 
-def post_save_customerUser(sender, instance, created, *args, **kwargs):
-    user, created = StripeUser.objects.get_or_create(i_user=instance)
+def post_save__create_user_stripe_mapping(sender, instance, created, *args, **kwargs):
+    user, created = UserStripeMapping.objects.get_or_create(i_user=instance)
     print("user:", user)
     print("created:", created)
     if user.stripe_id is None or user.stripe_id == '':
@@ -29,4 +29,4 @@ def post_save_customerUser(sender, instance, created, *args, **kwargs):
         user.save()
 
 
-post_save.connect(post_save_customerUser, sender=User)
+post_save.connect(post_save__create_user_stripe_mapping, sender=User)

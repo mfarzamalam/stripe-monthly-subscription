@@ -1,6 +1,6 @@
 from django.contrib import admin
-from .models import StripeUser
+from .models import UserStripeMapping
 
 # Register your models here.
 
-admin.site.register(StripeUser)
+admin.site.register(UserStripeMapping)

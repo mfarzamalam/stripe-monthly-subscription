@@ -3,13 +3,20 @@
 
 
 <div class="container">
+    <a href="{% url 'add_product' %}" class="btn btn-warning"> Add Product </a>
+    <br> <br> <br>
+    
     {% for product in products %}
         <div class="card" style="width: 18rem;">
             <img src="..." class="card-img-top" alt="...">
             <div class="card-body">
-            <h5 class="card-title">{{product.name}}</h5>
+            <h5 class="card-title">{{product.name}} for {{product.price}}rs</h5>
             <p class="card-text">{{product.description}}</p>
-            <a href="{% url 'monthly_subscription' product.id 1 %}" class="btn btn-primary"> Buy </a>
+            {% if product.button == "already" %}
+                <p class="btn btn-warning"> You Bought It Already </p>
+            {% elif product.button == "buy" %}
+                <a href="{% url 'monthly_subscription' product.id %}" class="btn btn-primary"> Buy Now </a>
+            {% endif %}
             </div>
         </div>
     {% endfor %}

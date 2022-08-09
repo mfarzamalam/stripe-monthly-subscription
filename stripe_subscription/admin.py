@@ -1,7 +1,7 @@
 from django.contrib import admin
-from .models import productSubscription, TwelveMonthSubscription
+from .models import *
 
 # Register your models here.
 
-admin.site.register(productSubscription)
-admin.site.register(TwelveMonthSubscription)
+admin.site.register(ProductStripeMapping)
+admin.site.register(UserSubscription)

@@ -3,11 +3,11 @@ from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import render, redirect
 from django.views.generic import View, TemplateView
 from product.models import Product
-from stripe_user.models import StripeUser
+from stripe_user.models import UserStripeMapping
 from django.contrib.auth.mixins import LoginRequiredMixin
-from datetime import datetime
+import datetime
 from dateutil.relativedelta import relativedelta
-from .models import productSubscription, TwelveMonthSubscription
+from .models import UserSubscription, ProductStripeMapping
 
 import stripe
 from config.settings import DOMAIN_NAME
@@ -17,18 +17,43 @@ stripe.api_key = SECRET_KEY
 # Create your views here.
 
 
+def check_user_is_available_to_subscribe(request, product):
+    date_format = "%Y-%m-%d"
+    current_date = datetime.datetime.today().strftime(date_format)
+    print(current_date)
+    user_subscription_obj = UserSubscription.objects.filter(
+        i_customer=request.user,
+        i_product_id=product,
+        status='active',
+    ).order_by('-subscription_end').first()
+
+    print("obj", user_subscription_obj)
+    end_date = user_subscription_obj.subscription_end.strftime(date_format)
+    print("end_date:", end_date)
+    if end_date >= current_date:
+        print("already")
+        # product_obj.update({'button': 'already'})
+    else:
+        print("buy")
+        # product_obj.update({'button': 'buy'})
+    return HttpResponse("OK")
+
+
 class MonthlySubscription(LoginRequiredMixin, View):
     login_url = "/login/"
-    def get(self, request, p, q, *args, **kwargs):
+    def get(self, request, p, *args, **kwargs):
         product_id  = p
-        quantity = q
+        quantity = 1
 
-        get_product = productSubscription.objects.filter(i_product_id=product_id).first()
-        stripe_price_id = get_product.product_stripe_price_id
+        product_obj = Product.objects.filter(id=product_id).first()
+        # subscription_type = product_obj.subscription_type
+
+        product_stripe_mapping_obj = ProductStripeMapping.objects.filter(i_product=product_obj).first()
+        stripe_price_id = product_stripe_mapping_obj.product_stripe_price_id
 
         print("user:", request.user.email)
 
-        user = StripeUser.objects.filter(i_user__email=request.user.email).first()
+        user = UserStripeMapping.objects.filter(i_user__email=request.user.email).first()
         print("user:", user)
         stripe_user_id = user.stripe_id
 
@@ -45,29 +70,35 @@ class MonthlySubscription(LoginRequiredMixin, View):
             ],
             payment_method_types=['card', 'us_bank_account'],
             mode='subscription',
-            success_url=DOMAIN + f"stripe/subscription/create_12_month_subscription/{{CHECKOUT_SESSION_ID}}/{product_id}/",
+            success_url=DOMAIN + f"stripe/subscription/create_user_subscription_obj/{{CHECKOUT_SESSION_ID}}/{product_id}",
             cancel_url=DOMAIN + f'single_product/{product_id}',
         )
 
         return redirect(checkout_session.url, code=303)
 
 
-def create_12_month_subscription(request, cs, product):
-    sub = stripe.checkout.Session.retrieve(cs).get('subscription')
-    date_created = stripe.Subscription.retrieve(sub).get('items').get('data')[0].get('created')
-    subscription_date = datetime.fromtimestamp(float(date_created))
-    product = Product.objects.filter(id=product).first()
-    print("subscription_date:", subscription_date)
-    date_range = []
-    for _ in range(12):
-        next_date = subscription_date+relativedelta(months=+1)
-        date_range.append(next_date.strftime('%Y-%m-%d'))
-        subscription_date = next_date
-    print(date_range)
+def create_user_subscription_obj(request, cs, product):
+    sub_id = stripe.checkout.Session.retrieve(cs).get('subscription')
+    stripe_obj = stripe.Subscription.retrieve(sub_id)
 
-    TwelveMonthSubscription.objects.bulk_create(
-        TwelveMonthSubscription(customer=request.user, product=product, month=month, status='unpaid')
-        for month in date_range
+    date_created = stripe_obj.get('current_period_start')
+    date_ended = stripe_obj.get('current_period_end')
+    subscription_start_date = datetime.datetime.fromtimestamp(float(date_created))
+    subscription_end_date = datetime.datetime.fromtimestamp(float(date_ended))
+    
+    product = Product.objects.filter(id=product).first()
+    
+    # subscription_start_date = datetime.fromtimestamp(float(date_created))
+    # subscription_end_date = subscription_start_date+relativedelta(months=+1)
+    
+    print("product:", product)
+    print("product__subscription_type:", product.subscription_type)
+    print("subscription_start_date:", subscription_start_date)
+    print("subscription_end_date:", subscription_end_date)
+    
+    UserSubscription.objects.create(
+        i_customer=request.user, i_product=product, subscription_start_date=subscription_start_date, 
+        subscription_end_date=subscription_end_date, subscription_status="active", subscription_id=sub_id
     )
 
     return HttpResponseRedirect('/')
