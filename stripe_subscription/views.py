@@ -1,12 +1,12 @@
 from django.shortcuts import render
-from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
+from django.urls import reverse
+from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render, redirect
-from django.views.generic import View, TemplateView
+from django.views.generic import View
 from product.models import Product
 from stripe_user.models import UserStripeMapping
 from django.contrib.auth.mixins import LoginRequiredMixin
 import datetime
-from dateutil.relativedelta import relativedelta
 from .models import UserSubscription, ProductStripeMapping
 
 import stripe
@@ -14,29 +14,27 @@ from config.settings import DOMAIN_NAME
 from config.stripe_key import SECRET_KEY
 stripe.api_key = SECRET_KEY
 
-# Create your views here.
 
 
 def check_user_is_available_to_subscribe(request, product):
+    print("product:", product)
     date_format = "%Y-%m-%d"
     current_date = datetime.datetime.today().strftime(date_format)
     print(current_date)
     user_subscription_obj = UserSubscription.objects.filter(
         i_customer=request.user,
-        i_product_id=product,
-        status='active',
-    ).order_by('-subscription_end').first()
+    ).order_by('-subscription_end_date').first()
 
-    print("obj", user_subscription_obj)
-    end_date = user_subscription_obj.subscription_end.strftime(date_format)
-    print("end_date:", end_date)
-    if end_date >= current_date:
-        print("already")
-        # product_obj.update({'button': 'already'})
+    print("obj:", user_subscription_obj)
+    if user_subscription_obj:
+        end_date = user_subscription_obj.subscription_end_date.strftime(date_format)
+        print("end_date:", end_date)
+        if end_date >= current_date:
+            return HttpResponse(f"You already subscribed to <b>{user_subscription_obj.i_product.subscription_type.title()}</b> offer, You cannot subscribe to another")
+        else:
+            return HttpResponseRedirect(reverse('monthly_subscription', kwargs={'p':int(product)}))
     else:
-        print("buy")
-        # product_obj.update({'button': 'buy'})
-    return HttpResponse("OK")
+        return HttpResponseRedirect(reverse('monthly_subscription', kwargs={'p':int(product)}))
 
 
 class MonthlySubscription(LoginRequiredMixin, View):
@@ -53,9 +51,9 @@ class MonthlySubscription(LoginRequiredMixin, View):
 
         print("user:", request.user.email)
 
-        user = UserStripeMapping.objects.filter(i_user__email=request.user.email).first()
-        print("user:", user)
-        stripe_user_id = user.stripe_id
+        user_stripe_mapping_obj = UserStripeMapping.objects.filter(i_user__email=request.user.email).first()
+        print("user_stripe_mapping_obj:", user_stripe_mapping_obj)
+        stripe_user_id = user_stripe_mapping_obj.stripe_id
 
         # 4242 4242 4242 4242 -- Fake card to test the checkout session
         DOMAIN = DOMAIN_NAME

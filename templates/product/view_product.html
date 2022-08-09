@@ -15,7 +15,7 @@
             {% if product.button == "already" %}
                 <p class="btn btn-warning"> You Bought It Already </p>
             {% elif product.button == "buy" %}
-                <a href="{% url 'monthly_subscription' product.id %}" class="btn btn-primary"> Buy Now </a>
+                <a href="{% url 'check_user_is_available_to_subscribe' product.id %}" class="btn btn-primary"> Buy Now </a>
             {% endif %}
             </div>
         </div>
